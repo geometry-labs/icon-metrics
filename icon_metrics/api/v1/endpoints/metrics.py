@@ -21,25 +21,26 @@ async def get_supply(session: AsyncSession = Depends(get_session)) -> Supply:
     return supply[0]
 
 
-# @router.get("/metrics/node-state")
-# async def get_node_state(
-#     http_client: aiohttp.ClientSession = Depends(http_client), network_name: str = "mainnet"
-# ) -> List[NodeState]:
-#     """Get node state."""
-#     r = await http_client.get(
-#         settings.ICON_PROMETHEUS_ENDPOINT + "/api/v1/query",
-#         params={"query": f'icon_prep_node_state{{network_name="{network_name}"}}'},
-#     )
-#     if r.status == 200:
-#         metrics = await r.json()
-#
-#         processed_metrics = []
-#         for i in metrics["data"]["result"]:
-#             processed_metrics.append(
-#                 NodeState(prep_name=i["metric"]["name"], state_id=i["value"][1])
-#             )
-#
-#         return processed_metrics
-#     else:
-#         # TODO: Make fallback call to DB
-#         raise HTTPException(status_code=503, detail="Prometheus service unavailable")
+@router.get("/metrics/node-state")
+async def get_node_state(
+    http_client: aiohttp.ClientSession = Depends(http_client), network_name: str = "mainnet"
+) -> List[NodeState]:
+    """Get node state."""
+    r = await http_client.post(
+        settings.ICON_NODE_URL + "/api/v3/query",
+        params={"query": f'icon_prep_node_state{{network_name="{network_name}"}}'},
+    )
+
+    if r.status == 200:
+        metrics = await r.json()
+
+        processed_metrics = []
+        for i in metrics["data"]["result"]:
+            processed_metrics.append(
+                NodeState(prep_name=i["metric"]["name"], state_id=i["value"][1])
+            )
+
+        return processed_metrics
+    else:
+        # TODO: Make fallback call to DB
+        raise HTTPException(status_code=503, detail="Prometheus service unavailable")
